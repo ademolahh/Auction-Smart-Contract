@@ -77,16 +77,17 @@ contract AuctionContract {
         auction.highestBidder = msg.sender;
         auction.highestBid = msg.value;
     }
-
-    function declineBid() external {
+function declineBid() external {
         AuctionDetails memory auction = auctionDetail[ID];
-        require(auction.ended, "Auction not has not ended");
+        require(block.timestamp >= auction.endAt, "Auction not ended");
         require(msg.sender != auction.highestBidder, "The winner is not allowed to withdraw");
         require(bidders[msg.sender] > 0 ether, "No balance available");
         //does this reset highest bidder? --yes, it does
         uint256 bal = bidders[msg.sender];
         bidders[msg.sender] = 0;
         payable(msg.sender).transfer(bal);
+        (bool success,) = payable(msg.sender).call{value: bal}("");
+        require(success, "Transfer Failed");
     }
 
     function endAuction() external {
@@ -102,22 +103,23 @@ contract AuctionContract {
 
         auction.ended = true;
         if (highestBidder != address(0)) {
+            bidders[highestBidder] = 0;
+            (bool success, ) = seller.call{value: bid}("");
+            require(success, "Transfer Failed");
             auctionPrize.safeTransferFrom(
                 address(this),
                 highestBidder,
                 tokenBidPrizeId
             );
-
-            payable(seller).transfer(bid);
         } else {
             auctionPrize.safeTransferFrom(
                 address(this),
                 seller,
                 tokenBidPrizeId
             );
-            payable(seller).transfer(bid);
         }
     }
+
 
     //return bid details
     function returnBidDetails() external view returns (AuctionDetails memory) {
