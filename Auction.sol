@@ -80,7 +80,8 @@ contract AuctionContract {
 
     function declineBid() external {
         AuctionDetails memory auction = auctionDetail[ID];
-        require(auction.started, "Auction not started");
+        require(auction.ended, "Auction not has not ended");
+        require(msg.sender != auction.highestBidder, "The winner is not allowed to withdraw");
         require(bidders[msg.sender] > 0 ether, "No balance available");
         //does this reset highest bidder? --yes, it does
         uint256 bal = bidders[msg.sender];
